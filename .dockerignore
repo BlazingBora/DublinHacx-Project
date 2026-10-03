@@ -1,0 +1,15 @@
+.git
+.claude
+.env
+inventory.db
+uploads/
+__pycache__/
+*.pyc
+
+mobile/
+
+receipt.jpg
+receipt1.png
+nyquil.png
+main.py
+ocr_test.py

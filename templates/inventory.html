@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <a href="{{ url_for('index') }}" class="back-link">&larr; Scan something else</a>
+
+    {% if removed %}
+        <div class="success">✅ Removed {{ removed }} item{{ "s" if removed != 1 else "" }} from your inventory.</div>
+    {% endif %}
+
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% endif %}
+
+    {% if interactions %}
+        <div class="interactions">
+            <h2>⚠️ Possible food-medication interactions</h2>
+            <p class="muted">
+                Based on a curated reference list, not medical advice.
+                Confirm with your pharmacist or doctor.
+            </p>
+            {% for warning in interactions %}
+                <div class="interaction-card severity-{{ warning.severity }}">
+                    <strong>{{ warning.food }}</strong> + <strong>{{ warning.drug }}</strong>
+                    <p>{{ warning.risk }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if recalls %}
+        <div class="interactions">
+            <h2>🚨 Possible food recalls</h2>
+            <p class="muted">
+                Best-effort keyword match against the FDA's public recall
+                database, not a guaranteed or complete check. Verify
+                anything that matters against the actual recall notice.
+            </p>
+            {% for r in recalls %}
+                <div class="interaction-card severity-{{ r.severity }}">
+                    <strong>{{ r.item }}</strong>: {{ r.classification or "Recall" }} ({{ r.date or "date unknown" }})
+                    <p>{{ r.reason or "No reason given." }}</p>
+                    <p class="muted">{{ r.firm }}: {{ r.product_description }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <p class="muted hint-line">
+        Items stay in your inventory until you check "remove / used up" and
+        submit. Selecting ingredients for a recipe never deletes anything.
+    </p>
+
+    <form data-animated="true">
+
+        <section class="scan-section">
+            <h2>🛒 Groceries ({{ groceries|length }})</h2>
+
+            {% if groceries %}
+                <div class="inventory">
+                    {% for item in groceries %}
+                        <div class="card urgency-{{ item.urgency }}">
+                            <div class="select-row">
+                                {% if not item.discard_tip %}
+                                    <label class="card-select">
+                                        <input type="checkbox" name="ingredient" value="{{ item.name }}">
+                                        use in recipe
+                                    </label>
+                                {% endif %}
+                                <label class="card-select">
+                                    <input type="checkbox" name="item_id" value="{{ item.id }}">
+                                    remove / used up
+                                </label>
+                            </div>
+                            <h2>{{ item.name or "Unknown" }}</h2>
+                            <p>Quantity: {{ item.quantity or 1 }}</p>
+                            <p>
+                                Price:
+                                {% if item.price is not none %}
+                                    ${{ "%.2f"|format(item.price|float) }}
+                                {% else %}
+                                    Unknown
+                                {% endif %}
+                            </p>
+                            <p class="expiration">{{ item.expiration_words }}</p>
+                            <p>Storage: {{ item.storage or "Unknown" }}</p>
+                            {% if item.storage_tip %}
+                                <p class="storage-tip">💡 {{ item.storage_tip }}</p>
+                            {% endif %}
+                            {% if item.freeze_tip %}
+                                <p class="freeze-tip">❄️ Freeze now to extend shelf life</p>
+                            {% endif %}
+                            {% if item.discard_tip %}
+                                <p class="discard-tip">☠️ Expired. Throw this away, it's no longer safe.</p>
+                            {% elif item.stale_tip %}
+                                <p class="stale-tip">🍞 Past its date, still usable: {{ item.stale_tip }}</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <button
+                    type="submit"
+                    formaction="{{ url_for('recipe') }}"
+                    formmethod="post"
+                    class="recipe-button"
+                    data-loading-text="Cooking up a recipe..."
+                    data-require-checked="ingredient"
+                    data-empty-message="Select at least one grocery item to build a recipe."
+                >🍳 Generate Recipe from Selected</button>
+            {% else %}
+                <p class="muted">No groceries tracked yet.</p>
+            {% endif %}
+        </section>
+
+        <section class="scan-section">
+            <h2>💊 Medications ({{ medications|length }})</h2>
+
+            {% if medications %}
+                <div class="inventory">
+                    {% for item in medications %}
+                        <div class="card urgency-{{ item.urgency }}">
+                            <label class="card-select">
+                                <input type="checkbox" name="item_id" value="{{ item.id }}">
+                                remove
+                            </label>
+                            <h2>{{ item.name or "Unknown" }}</h2>
+                            <p>Dosage: {{ item.dosage or "Unknown" }}</p>
+                            <p>Quantity: {{ item.quantity or "Unknown" }}</p>
+                            <p class="expiration">{{ item.expiration_words }}</p>
+                            <p>Refills left: {{ item.refills_left if item.refills_left is not none else "Unknown" }}</p>
+                            {% if item.instructions %}
+                                <p>Instructions: {{ item.instructions }}</p>
+                            {% endif %}
+                            {% if item.discard_tip %}
+                                <p class="discard-tip">☠️ Expired. Dispose of this safely, do not take it.</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="muted">No medications tracked yet.</p>
+            {% endif %}
+        </section>
+
+        {% if groceries or medications %}
+            <button
+                type="submit"
+                formaction="{{ url_for('inventory_remove') }}"
+                formmethod="post"
+                class="remove-button"
+                data-loading-text="Updating inventory..."
+                data-require-checked="item_id"
+                data-empty-message="Check at least one item to remove first."
+            >🗑️ Remove Selected</button>
+        {% endif %}
+    </form>
+{% endblock %}

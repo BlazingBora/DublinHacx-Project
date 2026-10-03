@@ -1,0 +1,10 @@
+.env
+uploads/
+__pycache__/
+inventory.db
+
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/ios/
+mobile/android/

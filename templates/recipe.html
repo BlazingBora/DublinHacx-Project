@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <a href="{{ url_for('index') }}" class="back-link">&larr; Scan something else</a>
+
+    <div class="recipe">
+        <h2>{{ recipe.title or "Recipe" }}</h2>
+
+        {% if recipe.servings %}
+            <p class="muted">Servings: {{ recipe.servings }}</p>
+        {% endif %}
+
+        {% if recipe.uses_ingredients %}
+            <h3>Uses your ingredients</h3>
+            <ul>
+                {% for ingredient in recipe.uses_ingredients %}
+                    <li>{{ ingredient }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        {% if recipe.additional_ingredients %}
+            <h3>You'll also need</h3>
+            <ul>
+                {% for ingredient in recipe.additional_ingredients %}
+                    <li>{{ ingredient }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        {% if recipe.steps %}
+            <h3>Steps</h3>
+            <ol>
+                {% for step in recipe.steps %}
+                    <li>{{ step }}</li>
+                {% endfor %}
+            </ol>
+        {% endif %}
+    </div>
+{% endblock %}

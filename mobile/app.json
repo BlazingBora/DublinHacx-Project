@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "XpireScan",
+    "slug": "xpirescan",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.xpirescan.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Used to take photos of receipts and medication labels to scan.",
+        "NSPhotoLibraryUsageDescription": "Used to choose receipt and medication label photos to scan."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <section class="scan-section">
+        <h2>🛒 Scan a Receipt</h2>
+        <form action="{{ url_for('scan') }}" method="post" enctype="multipart/form-data" class="upload-form" data-animated="true">
+            <label for="receipt" class="dropzone">
+                <input type="file" id="receipt" name="receipt" accept="image/png,image/jpeg,image/webp" required>
+                <span>Click to choose a receipt image</span>
+            </label>
+            <button type="submit" data-loading-text="Scanning receipt...">Scan Receipt</button>
+        </form>
+    </section>
+
+    <p class="hint">Scanning runs OCR and an AI model, so it may take a few seconds.</p>
+
+    <div class="divider"><span>or</span></div>
+
+    <section class="scan-section">
+        <h2>✍️ Just Tell Us What You Bought</h2>
+        <form action="{{ url_for('add_statement') }}" method="post" class="statement-form" data-animated="true">
+            <textarea
+                name="statement"
+                id="statement-input"
+                class="statement-input"
+                placeholder="e.g. bought 2 avocados, a loaf of bread, and a gallon of milk yesterday"
+                rows="2"
+                required
+            ></textarea>
+
+            <div class="statement-chips">
+                <button type="button" class="chip" data-fill="Bought a dozen eggs, a gallon of milk, and some spinach today">🥚 eggs, milk, spinach</button>
+                <button type="button" class="chip" data-fill="Picked up chicken breast, rice, and bananas yesterday">🍗 chicken, rice, bananas</button>
+                <button type="button" class="chip" data-fill="Got bread, butter, and a block of cheddar cheese today">🧀 bread, butter, cheese</button>
+            </div>
+
+            <button type="submit" data-loading-text="Adding to inventory...">➕ Add to Inventory</button>
+        </form>
+    </section>
+
+    <p class="hint">No photo needed, just describe it in plain English.</p>
+
+    <section class="scan-section-compact">
+        <form action="{{ url_for('scan_medication') }}" method="post" enctype="multipart/form-data" class="upload-form-compact" data-animated="true">
+            <label for="medication" class="dropzone dropzone-compact">
+                <input type="file" id="medication" name="medication" accept="image/png,image/jpeg,image/webp" required>
+                <span>💊 Or scan a medication label</span>
+            </label>
+            <button type="submit" class="button-compact" data-loading-text="Scanning...">Scan</button>
+        </form>
+    </section>
+{% endblock %}
