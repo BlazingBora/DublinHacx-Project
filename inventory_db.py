@@ -118,6 +118,38 @@ def add_items(items, source, device_id, purchase_date=None):
     return new_ids
 
 
+def split_by_category(items):
+    """Splits AI-classified items into (groceries, medications)."""
+
+    groceries, medications = [], []
+
+    for item in items:
+        if (item.get("category") or "").strip().lower() == "medication":
+            medications.append(item)
+        else:
+            groceries.append(item)
+
+    return groceries, medications
+
+
+def add_classified_items(items, device_id, purchase_date=None):
+    """
+    Saves receipt/statement items, routing anything the AI tagged as a
+    medication to the medications list instead of groceries.
+    Returns (groceries, medications).
+    """
+
+    groceries, medications = split_by_category(items)
+
+    if groceries:
+        add_items(groceries, source="grocery", device_id=device_id, purchase_date=purchase_date)
+
+    if medications:
+        add_items(medications, source="medication", device_id=device_id, purchase_date=purchase_date)
+
+    return groceries, medications
+
+
 def list_items(device_id, source=None):
     """Returns one device's persisted items as dicts, optionally filtered by source."""
 

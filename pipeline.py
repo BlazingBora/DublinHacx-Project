@@ -388,7 +388,8 @@ Return ONLY valid JSON:
             "storage": "refrigerator",
             "storage_tip": "Keep toward the back of the fridge, not the door, to stay coldest.",
             "stale_use_tip": null,
-            "grace_days": 0
+            "grace_days": 0,
+            "category": "grocery"
         }}
     ]
 }}
@@ -396,6 +397,16 @@ Return ONLY valid JSON:
 ========================================
 RULES
 ========================================
+
+- category is "medication" for medicines and health products taken
+  as a drug: OTC or prescription pills, cough/cold syrups, pain
+  relievers, allergy tablets, antacids, vitamins and supplements.
+  Everything else (food, drinks, household and personal care items
+  like soap or shampoo) is "grocery".
+- For a medication, estimate a typical unopened shelf-life (often
+  1-3 years), use "medicine cabinet" or similar for storage, and use
+  null for stale_use_tip and 0 for grace_days - expired medicine
+  should never be used.
 
 - Use reasonable typical shelf-life estimates.
 - Consider refrigeration, freezing, or pantry storage.
@@ -573,7 +584,9 @@ Rules:
    "last Monday", "3 days ago") against today's date ({today}) into an
    absolute YYYY-MM-DD date. If no time is mentioned at all, use today's
    date ({today}).
-6. Ignore anything that isn't a purchasable grocery product.
+6. Ignore anything that isn't a purchasable product. Keep store-bought
+   medications too (e.g. "Tylenol", "NyQuil", "vitamin D") - they are
+   sorted into a separate medications list later.
 7. If nothing resembling a grocery purchase is found, return an empty
    items list.
 8. Return ONLY JSON. Do not explain your answer.

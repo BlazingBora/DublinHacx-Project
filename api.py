@@ -7,7 +7,7 @@ from flask import Blueprint, jsonify, request
 from werkzeug.utils import secure_filename
 
 from device import get_device_id
-from inventory_db import add_items, list_items, remove_items
+from inventory_db import add_classified_items, add_items, list_items, remove_items
 from pipeline import (
     check_interactions,
     enrich_items,
@@ -85,10 +85,11 @@ def api_scan():
     if error:
         return jsonify({"error": error}), 422
 
-    add_items(inventory, source="grocery", device_id=get_device_id(), purchase_date=receipt_date)
+    groceries, medications = add_classified_items(inventory, get_device_id(), purchase_date=receipt_date)
 
-    grocery_names = [item.get("name") for item in inventory if item.get("name")]
-    interactions = check_interactions(known_medications, grocery_names)
+    grocery_names = [item.get("name") for item in groceries if item.get("name")]
+    medication_names = [item.get("name") for item in medications if item.get("name")]
+    interactions = check_interactions(known_medications + medication_names, grocery_names)
     recalls = check_food_recalls(grocery_names)
 
     return jsonify({
@@ -111,10 +112,11 @@ def api_add_statement():
     if error:
         return jsonify({"error": error}), 422
 
-    add_items(inventory, source="grocery", device_id=get_device_id(), purchase_date=purchase_date)
+    groceries, medications = add_classified_items(inventory, get_device_id(), purchase_date=purchase_date)
 
-    grocery_names = [item.get("name") for item in inventory if item.get("name")]
-    interactions = check_interactions(known_medications, grocery_names)
+    grocery_names = [item.get("name") for item in groceries if item.get("name")]
+    medication_names = [item.get("name") for item in medications if item.get("name")]
+    interactions = check_interactions(known_medications + medication_names, grocery_names)
     recalls = check_food_recalls(grocery_names)
 
     return jsonify({

@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 from api import api as api_blueprint
 import device
 from device import get_device_id
-from inventory_db import add_items, list_items, remove_all_items, remove_items
+from inventory_db import add_classified_items, add_items, list_items, remove_all_items, remove_items
 from pipeline import (
     check_interactions,
     enrich_items,
@@ -84,7 +84,7 @@ def scan():
     if error:
         return render_template("index.html", error=error)
 
-    add_items(inventory, source="grocery", device_id=get_device_id(), purchase_date=receipt_date)
+    add_classified_items(inventory, get_device_id(), purchase_date=receipt_date)
 
     return redirect(url_for("inventory", added=len(inventory)))
 
@@ -98,7 +98,7 @@ def add_statement():
     if error:
         return render_template("index.html", error=error)
 
-    add_items(inventory, source="grocery", device_id=get_device_id(), purchase_date=purchase_date)
+    add_classified_items(inventory, get_device_id(), purchase_date=purchase_date)
 
     return redirect(url_for("inventory", added=len(inventory)))
 
