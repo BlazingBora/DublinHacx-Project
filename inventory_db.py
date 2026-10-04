@@ -5,7 +5,8 @@ from datetime import datetime, timezone
 # It's required in production because Vercel's filesystem is ephemeral -
 # a SQLite file wouldn't survive between requests/deploys there. Locally,
 # without it set, we fall back to a SQLite file for convenience.
-DATABASE_URL = os.getenv("DATABASE_URL")
+# Vercel's Postgres/Neon integration may name it POSTGRES_URL instead.
+DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL")
 
 if DATABASE_URL:
     import psycopg
