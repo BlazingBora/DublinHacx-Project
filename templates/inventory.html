@@ -98,17 +98,6 @@
             {% endif %}
         </section>
 
-        {% if groceries %}
-            <button
-                type="submit"
-                formaction="{{ url_for('inventory_remove_all', source='grocery') }}"
-                formmethod="post"
-                class="remove-all-button"
-                data-loading-text="Removing all groceries..."
-                data-confirm="Remove all groceries from your inventory? This can't be undone."
-            >🗑️ Remove All Groceries</button>
-        {% endif %}
-
         <section class="scan-section">
             <h2>💊 Medications ({{ medications|length }})</h2>
 
@@ -151,6 +140,17 @@
                 data-require-checked="item_id"
                 data-empty-message="Check at least one item to remove first."
             >🗑️ Remove Selected</button>
+        {% endif %}
+
+        {% if groceries %}
+            <button
+                type="submit"
+                formaction="{{ url_for('inventory_remove_all', source='grocery') }}"
+                formmethod="post"
+                class="remove-all-button"
+                data-loading-text="Removing all groceries..."
+                data-confirm="Remove all groceries from your inventory? This can't be undone."
+            >🗑️ Remove All Groceries</button>
         {% endif %}
     </form>
 {% endblock %}
