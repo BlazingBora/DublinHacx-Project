@@ -1,9 +1,9 @@
-import os
+import base64
 import json
-import re
+import mimetypes
+import os
 from datetime import date, datetime
 
-import easyocr
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -35,15 +35,64 @@ MODEL = "DeepSeek-V4.1-Flash"
 
 
 # ==========================================
-# OCR SETUP
+# OCR (via the model's vision input, instead of
+# a local OCR engine - keeps the deployed app
+# small and fast enough to run as a serverless
+# function, with no model weights to load)
 # ==========================================
 
-print("Loading OCR...")
+def _encode_image(image_path):
+    mime_type, _ = mimetypes.guess_type(image_path)
+    mime_type = mime_type or "image/jpeg"
 
-reader = easyocr.Reader(
-    ["en"],
-    gpu=False
-)
+    with open(image_path, "rb") as f:
+        encoded = base64.b64encode(f.read()).decode("utf-8")
+
+    return f"data:{mime_type};base64,{encoded}"
+
+
+def _vision_ocr(image_path, instruction):
+    try:
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": instruction},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": _encode_image(image_path)}
+                        }
+                    ]
+                }
+            ],
+            temperature=0.1,
+            max_tokens=2000
+        )
+
+        if not response.choices:
+            print("ERROR: No response choices.")
+            return ""
+
+        message = response.choices[0].message
+
+        if message is None or message.content is None:
+            print("ERROR: No OCR text returned.")
+            return ""
+
+        return message.content.strip()
+
+    except Exception as e:
+
+        print("\n========================================")
+        print("OCR ERROR")
+        print("========================================")
+
+        print(type(e).__name__)
+        print(str(e))
+
+        return ""
 
 
 # ==========================================
@@ -54,43 +103,12 @@ def scan_receipt(image_path):
 
     print("\nScanning receipt with OCR...")
 
-    results = reader.readtext(image_path)
-
-    text_lines = []
-
-    for bounding_box, text, confidence in results:
-
-        # Ignore low-confidence OCR
-        if confidence < 0.25:
-            continue
-
-        text = text.strip()
-
-        if not text:
-            continue
-
-        # Ignore lines containing only numbers,
-        # prices, percentages, etc.
-        if re.fullmatch(r"[\d\s.$%,-]+", text):
-            continue
-
-        # Ignore long barcode / transaction numbers
-        if re.fullmatch(r"\d{8,}", text):
-            continue
-
-        # Ignore obvious phone numbers
-        if re.search(r"\(\d{3}\)", text):
-            continue
-
-        # Ignore strings that are basically phone numbers
-        if re.fullmatch(r"[\d\s().-]{10,}", text):
-            continue
-
-        text_lines.append(text)
-
-    receipt_text = "\n".join(text_lines)
-
-    return receipt_text
+    return _vision_ocr(
+        image_path,
+        "Transcribe every line of text visible on this grocery receipt "
+        "image, exactly as printed, preserving line breaks. Output only "
+        "the transcribed text - no extra commentary."
+    )
 
 
 # ==========================================
@@ -629,23 +647,12 @@ def scan_medication_label(image_path):
 
     print("\nScanning medication label with OCR...")
 
-    results = reader.readtext(image_path)
-
-    text_lines = []
-
-    for bounding_box, text, confidence in results:
-
-        if confidence < 0.2:
-            continue
-
-        text = text.strip()
-
-        if not text:
-            continue
-
-        text_lines.append(text)
-
-    return "\n".join(text_lines)
+    return _vision_ocr(
+        image_path,
+        "Transcribe every line of text visible on this medication "
+        "bottle/box label image, exactly as printed, preserving line "
+        "breaks. Output only the transcribed text - no extra commentary."
+    )
 
 
 # ==========================================

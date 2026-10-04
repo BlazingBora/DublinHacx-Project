@@ -1,27 +1,43 @@
 import os
-import sqlite3
 from datetime import datetime, timezone
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# In production this points at a mounted persistent volume (e.g. Fly.io),
-# so the inventory survives deploys/restarts instead of living on the
-# container's ephemeral filesystem.
-DB_PATH = os.getenv("INVENTORY_DB_PATH", os.path.join(BASE_DIR, "inventory.db"))
+# DATABASE_URL points at Postgres (e.g. Vercel Postgres, Neon, Supabase).
+# It's required in production because Vercel's filesystem is ephemeral -
+# a SQLite file wouldn't survive between requests/deploys there. Locally,
+# without it set, we fall back to a SQLite file for convenience.
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
+if DATABASE_URL:
+    import psycopg
+    from psycopg.rows import dict_row
 
+    def _connect():
+        return psycopg.connect(DATABASE_URL, row_factory=dict_row, autocommit=True)
 
-def _connect():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    _PH = "%s"
+    _ID_COLUMN = "id SERIAL PRIMARY KEY"
+else:
+    import sqlite3
+
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    SQLITE_PATH = os.getenv("INVENTORY_DB_PATH", os.path.join(BASE_DIR, "inventory.db"))
+
+    os.makedirs(os.path.dirname(SQLITE_PATH) or ".", exist_ok=True)
+
+    def _connect():
+        conn = sqlite3.connect(SQLITE_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    _PH = "?"
+    _ID_COLUMN = "id INTEGER PRIMARY KEY AUTOINCREMENT"
 
 
 def init_db():
     with _connect() as conn:
-        conn.execute("""
+        conn.execute(f"""
             CREATE TABLE IF NOT EXISTS inventory (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                {_ID_COLUMN},
                 source TEXT NOT NULL,
                 name TEXT NOT NULL,
                 quantity TEXT,
@@ -33,17 +49,11 @@ def init_db():
                 storage_tip TEXT,
                 estimated_expiration TEXT,
                 purchase_date TEXT,
-                added_at TEXT NOT NULL
+                added_at TEXT NOT NULL,
+                stale_use_tip TEXT,
+                grace_days INTEGER
             )
         """)
-
-        existing_columns = {
-            row["name"] for row in conn.execute("PRAGMA table_info(inventory)")
-        }
-
-        for column, column_type in (("stale_use_tip", "TEXT"), ("grace_days", "INTEGER")):
-            if column not in existing_columns:
-                conn.execute(f"ALTER TABLE inventory ADD COLUMN {column} {column_type}")
 
 
 def add_items(items, source, purchase_date=None):
@@ -54,13 +64,17 @@ def add_items(items, source, purchase_date=None):
 
     with _connect() as conn:
         for item in items:
-            cursor = conn.execute(
-                """
+            row = conn.execute(
+                f"""
                 INSERT INTO inventory (
                     source, name, quantity, price, dosage, refills_left,
                     instructions, storage, storage_tip, estimated_expiration,
                     purchase_date, added_at, stale_use_tip, grace_days
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (
+                    {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH},
+                    {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}
+                )
+                RETURNING id
                 """,
                 (
                     source,
@@ -78,8 +92,8 @@ def add_items(items, source, purchase_date=None):
                     item.get("stale_use_tip"),
                     item.get("grace_days"),
                 ),
-            )
-            new_ids.append(cursor.lastrowid)
+            ).fetchone()
+            new_ids.append(row["id"])
 
     return new_ids
 
@@ -90,7 +104,7 @@ def list_items(source=None):
     with _connect() as conn:
         if source:
             rows = conn.execute(
-                "SELECT * FROM inventory WHERE source = ? ORDER BY id DESC",
+                f"SELECT * FROM inventory WHERE source = {_PH} ORDER BY id DESC",
                 (source,),
             ).fetchall()
         else:
@@ -107,7 +121,7 @@ def remove_items(ids):
     if not ids:
         return 0
 
-    placeholders = ",".join("?" for _ in ids)
+    placeholders = ",".join(_PH for _ in ids)
 
     with _connect() as conn:
         cursor = conn.execute(
@@ -121,7 +135,7 @@ def remove_all_items(source):
     """Deletes every row for the given source. Returns the number of rows removed."""
 
     with _connect() as conn:
-        cursor = conn.execute("DELETE FROM inventory WHERE source = ?", (source,))
+        cursor = conn.execute(f"DELETE FROM inventory WHERE source = {_PH}", (source,))
         return cursor.rowcount
 
 

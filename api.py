@@ -1,5 +1,6 @@
 import json
 import os
+import tempfile
 import uuid
 
 from flask import Blueprint, jsonify, request
@@ -18,8 +19,7 @@ from recalls import check_food_recalls
 
 api = Blueprint("api", __name__, url_prefix="/api")
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+UPLOAD_DIR = os.path.join(tempfile.gettempdir(), "xpirescan-uploads")
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)

@@ -1,4 +1,5 @@
 import os
+import tempfile
 import uuid
 
 from flask import Flask, redirect, render_template, request, url_for
@@ -17,8 +18,11 @@ from pipeline import (
 )
 from recalls import check_food_recalls
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
+# Uploaded images are processed and deleted within the same request, so
+# they only ever need to live in the OS temp dir - which is also the only
+# writable location on a serverless platform like Vercel (its filesystem
+# is otherwise read-only).
+UPLOAD_DIR = os.path.join(tempfile.gettempdir(), "xpirescan-uploads")
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
