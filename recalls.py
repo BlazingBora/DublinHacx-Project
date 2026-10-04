@@ -1,4 +1,5 @@
 import re
+from datetime import date, timedelta
 
 import requests
 
@@ -9,6 +10,10 @@ STOPWORDS = {
     "flavored", "natural", "original", "classic", "select", "premium",
     "whole", "pack", "size",
 }
+
+# Older recalls are almost certainly about stock that's long gone from
+# shelves, so they'd only be noise.
+MAX_RECALL_AGE_DAYS = 365
 
 CLASSIFICATION_SEVERITY = {
     "Class I": "high",
@@ -52,16 +57,25 @@ def check_food_recalls(grocery_names, limit=25, timeout=4):
     query_keywords = sorted(keyword_map.keys())[:15]
     query = " ".join(query_keywords)
 
+    today = date.today()
+    cutoff = (today - timedelta(days=MAX_RECALL_AGE_DAYS)).strftime("%Y%m%d")
+    date_range = f"recall_initiation_date:[{cutoff} TO {today.strftime('%Y%m%d')}]"
+
     try:
         response = requests.get(
             ENFORCEMENT_URL,
             params={
-                "search": f"product_description:({query})",
+                "search": f"product_description:({query}) AND {date_range}",
                 "limit": limit,
                 "sort": "recall_initiation_date:desc",
             },
             timeout=timeout,
         )
+
+        # openFDA answers 404 when nothing matches - that's just "no recalls".
+        if response.status_code == 404:
+            return []
+
         response.raise_for_status()
         data = response.json()
     except Exception as e:
@@ -85,6 +99,10 @@ def check_food_recalls(grocery_names, limit=25, timeout=4):
     seen = set()
 
     for result in data.get("results", []):
+        # Double-check the date filter in case the API ignores it.
+        if (result.get("recall_initiation_date") or "") < cutoff:
+            continue
+
         description = (result.get("product_description") or "").lower()
         description_words = set(re.findall(r"[a-z]{4,}", description))
 
