@@ -26,6 +26,11 @@ if not API_KEY or not ENDPOINT:
         ".env locally, or to the project's Environment Variables on Vercel."
     )
 
+AI_NOT_CONFIGURED = (
+    "The AI service isn't configured on this server: AZURE_API_KEY / "
+    "AZURE_ENDPOINT are not set."
+)
+
 client = OpenAI(
     api_key=API_KEY or "missing-azure-api-key",
     base_url=ENDPOINT or "https://missing-azure-endpoint.invalid",
@@ -491,6 +496,9 @@ def process_receipt(image_path):
     on a receipt image and returns (inventory, receipt_date, error_message).
     """
 
+    if not API_KEY or not ENDPOINT:
+        return [], None, AI_NOT_CONFIGURED
+
     receipt_text = scan_receipt(image_path)
 
     if not receipt_text:
@@ -636,6 +644,9 @@ def process_statement(statement):
     Runs free-text parsing -> expiration estimation on a typed grocery
     statement and returns (inventory, purchase_date, error_message).
     """
+
+    if not API_KEY or not ENDPOINT:
+        return [], None, AI_NOT_CONFIGURED
 
     statement = (statement or "").strip()
 
@@ -804,6 +815,9 @@ def process_medication(image_path):
     Runs OCR -> medication extraction on a label image and returns
     (medications, error_message).
     """
+
+    if not API_KEY or not ENDPOINT:
+        return [], AI_NOT_CONFIGURED
 
     label_text = scan_medication_label(image_path)
 
