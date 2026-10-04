@@ -2,6 +2,7 @@ import base64
 import json
 import mimetypes
 import os
+import time
 from datetime import date, datetime
 
 from dotenv import load_dotenv
@@ -51,48 +52,65 @@ def _encode_image(image_path):
     return f"data:{mime_type};base64,{encoded}"
 
 
-def _vision_ocr(image_path, instruction):
-    try:
-        response = client.chat.completions.create(
-            model=MODEL,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": instruction},
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": _encode_image(image_path)}
-                        }
-                    ]
-                }
-            ],
-            temperature=0.1,
-            max_tokens=2000
-        )
+def _vision_ocr(image_path, instruction, attempts=3, attempt_timeout=20):
+    """
+    The vision endpoint is unreliable in practice: a normal call finishes
+    in a few seconds, but it occasionally just hangs until something
+    aborts it. Waiting out the client's full default timeout (tuned for
+    the much more consistent text-only calls) on every attempt would mean
+    minutes of waiting before giving up, so each attempt here gets its own
+    short timeout and we retry a few times with backoff instead.
+    """
 
-        if not response.choices:
-            print("ERROR: No response choices.")
-            return ""
+    image_data_url = _encode_image(image_path)
+    fast_client = client.with_options(timeout=attempt_timeout, max_retries=0)
 
-        message = response.choices[0].message
+    last_error = None
 
-        if message is None or message.content is None:
-            print("ERROR: No OCR text returned.")
-            return ""
+    for attempt in range(1, attempts + 1):
+        try:
+            response = fast_client.chat.completions.create(
+                model=MODEL,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": instruction},
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": image_data_url}
+                            }
+                        ]
+                    }
+                ],
+                temperature=0.1,
+                max_tokens=2000
+            )
 
-        return message.content.strip()
+            if not response.choices:
+                last_error = "No response choices."
+            else:
+                message = response.choices[0].message
 
-    except Exception as e:
+                if message is None or message.content is None:
+                    last_error = "No OCR text returned."
+                else:
+                    return message.content.strip()
 
-        print("\n========================================")
-        print("OCR ERROR")
-        print("========================================")
+        except Exception as e:
+            last_error = f"{type(e).__name__}: {e}"
 
-        print(type(e).__name__)
-        print(str(e))
+        print(f"\nOCR attempt {attempt}/{attempts} failed: {last_error}")
 
-        return ""
+        if attempt < attempts:
+            time.sleep(1.5 * attempt)
+
+    print("\n========================================")
+    print("OCR ERROR (all retries exhausted)")
+    print("========================================")
+    print(last_error)
+
+    return ""
 
 
 # ==========================================
