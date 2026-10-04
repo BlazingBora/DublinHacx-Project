@@ -6,6 +6,7 @@ import uuid
 from flask import Blueprint, jsonify, request
 from werkzeug.utils import secure_filename
 
+from device import get_device_id
 from inventory_db import add_items, list_items, remove_items
 from pipeline import (
     check_interactions,
@@ -84,7 +85,7 @@ def api_scan():
     if error:
         return jsonify({"error": error}), 422
 
-    add_items(inventory, source="grocery", purchase_date=receipt_date)
+    add_items(inventory, source="grocery", device_id=get_device_id(), purchase_date=receipt_date)
 
     grocery_names = [item.get("name") for item in inventory if item.get("name")]
     interactions = check_interactions(known_medications, grocery_names)
@@ -110,7 +111,7 @@ def api_add_statement():
     if error:
         return jsonify({"error": error}), 422
 
-    add_items(inventory, source="grocery", purchase_date=purchase_date)
+    add_items(inventory, source="grocery", device_id=get_device_id(), purchase_date=purchase_date)
 
     grocery_names = [item.get("name") for item in inventory if item.get("name")]
     interactions = check_interactions(known_medications, grocery_names)
@@ -151,7 +152,7 @@ def api_scan_medication():
     for med in medications:
         med["estimated_expiration"] = med.get("expiration_date")
 
-    add_items(medications, source="medication")
+    add_items(medications, source="medication", device_id=get_device_id())
 
     medication_names = [med.get("name") for med in medications if med.get("name")]
     interactions = check_interactions(medication_names, known_groceries)
@@ -165,8 +166,8 @@ def api_scan_medication():
 
 @api.route("/inventory", methods=["GET"])
 def api_inventory():
-    groceries = enrich_items(list_items(source="grocery"))
-    medications = enrich_items(list_items(source="medication"))
+    groceries = enrich_items(list_items(get_device_id(), source="grocery"))
+    medications = enrich_items(list_items(get_device_id(), source="medication"))
 
     grocery_names = [g.get("name") for g in groceries if g.get("name")]
 
@@ -189,7 +190,7 @@ def api_inventory_remove():
     data = request.get_json(silent=True) or {}
     ids = data.get("ids", [])
 
-    removed = remove_items(ids)
+    removed = remove_items(ids, get_device_id())
 
     return jsonify({"removed": removed})
 

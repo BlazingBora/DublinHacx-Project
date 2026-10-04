@@ -7,6 +7,8 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
 from api import api as api_blueprint
+import device
+from device import get_device_id
 from inventory_db import add_items, list_items, remove_all_items, remove_items
 from pipeline import (
     check_interactions,
@@ -33,6 +35,7 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev-secret-change-me")
 
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 app.register_blueprint(api_blueprint)
+device.init_app(app)
 
 
 def allowed_file(filename):
@@ -81,7 +84,7 @@ def scan():
     if error:
         return render_template("index.html", error=error)
 
-    add_items(inventory, source="grocery", purchase_date=receipt_date)
+    add_items(inventory, source="grocery", device_id=get_device_id(), purchase_date=receipt_date)
 
     return redirect(url_for("inventory", added=len(inventory)))
 
@@ -95,7 +98,7 @@ def add_statement():
     if error:
         return render_template("index.html", error=error)
 
-    add_items(inventory, source="grocery", purchase_date=purchase_date)
+    add_items(inventory, source="grocery", device_id=get_device_id(), purchase_date=purchase_date)
 
     return redirect(url_for("inventory", added=len(inventory)))
 
@@ -130,7 +133,7 @@ def scan_medication():
     for med in medications:
         med["estimated_expiration"] = med.get("expiration_date")
 
-    add_items(medications, source="medication")
+    add_items(medications, source="medication", device_id=get_device_id())
 
     return redirect(url_for("inventory", added=len(medications)))
 
@@ -158,8 +161,8 @@ def recipe():
 
 @app.route("/inventory", methods=["GET"])
 def inventory():
-    groceries = enrich_items(list_items(source="grocery"))
-    medications = enrich_items(list_items(source="medication"))
+    groceries = enrich_items(list_items(get_device_id(), source="grocery"))
+    medications = enrich_items(list_items(get_device_id(), source="medication"))
 
     grocery_names = [g.get("name") for g in groceries if g.get("name")]
 
@@ -181,7 +184,7 @@ def inventory():
 @app.route("/inventory/remove", methods=["POST"])
 def inventory_remove():
     ids = request.form.getlist("item_id")
-    removed = remove_items(ids)
+    removed = remove_items(ids, get_device_id())
 
     return redirect(url_for("inventory", removed=removed))
 
@@ -191,7 +194,7 @@ def inventory_remove_all(source):
     if source not in ("grocery", "medication"):
         return redirect(url_for("inventory"))
 
-    removed = remove_all_items(source)
+    removed = remove_all_items(source, get_device_id())
 
     return redirect(url_for("inventory", removed=removed))
 
@@ -199,7 +202,7 @@ def inventory_remove_all(source):
 @app.route("/recalls", methods=["GET"])
 def recalls_page():
     grocery_names = [
-        item.get("name") for item in list_items(source="grocery") if item.get("name")
+        item.get("name") for item in list_items(get_device_id(), source="grocery") if item.get("name")
     ]
 
     return render_template("recalls.html", recalls=check_food_recalls(grocery_names))

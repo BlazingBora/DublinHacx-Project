@@ -55,13 +55,27 @@ def init_db():
                 purchase_date TEXT,
                 added_at TEXT NOT NULL,
                 stale_use_tip TEXT,
-                grace_days INTEGER
+                grace_days INTEGER,
+                device_id TEXT
             )
         """)
 
+    # Tables created before per-device inventories lack device_id. Rows
+    # added before then have no owner, so they're hidden from everyone.
+    try:
+        with _connect() as conn:
+            conn.execute("ALTER TABLE inventory ADD COLUMN device_id TEXT")
+    except Exception:
+        pass  # column already exists
 
-def add_items(items, source, purchase_date=None):
-    """Persists scanned items (source is 'grocery' or 'medication'). Returns the new row ids."""
+    with _connect() as conn:
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_inventory_device ON inventory (device_id, source)"
+        )
+
+
+def add_items(items, source, device_id, purchase_date=None):
+    """Persists scanned items (source is 'grocery' or 'medication') for one device. Returns the new row ids."""
 
     added_at = datetime.now(timezone.utc).isoformat()
     new_ids = []
@@ -73,10 +87,11 @@ def add_items(items, source, purchase_date=None):
                 INSERT INTO inventory (
                     source, name, quantity, price, dosage, refills_left,
                     instructions, storage, storage_tip, estimated_expiration,
-                    purchase_date, added_at, stale_use_tip, grace_days
+                    purchase_date, added_at, stale_use_tip, grace_days,
+                    device_id
                 ) VALUES (
                     {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH},
-                    {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}
+                    {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}, {_PH}
                 )
                 RETURNING id
                 """,
@@ -95,6 +110,7 @@ def add_items(items, source, purchase_date=None):
                     added_at,
                     item.get("stale_use_tip"),
                     item.get("grace_days"),
+                    device_id,
                 ),
             ).fetchone()
             new_ids.append(row["id"])
@@ -102,23 +118,26 @@ def add_items(items, source, purchase_date=None):
     return new_ids
 
 
-def list_items(source=None):
-    """Returns persisted items as dicts, optionally filtered by source."""
+def list_items(device_id, source=None):
+    """Returns one device's persisted items as dicts, optionally filtered by source."""
 
     with _connect() as conn:
         if source:
             rows = conn.execute(
-                f"SELECT * FROM inventory WHERE source = {_PH} ORDER BY id DESC",
-                (source,),
+                f"SELECT * FROM inventory WHERE device_id = {_PH} AND source = {_PH} ORDER BY id DESC",
+                (device_id, source),
             ).fetchall()
         else:
-            rows = conn.execute("SELECT * FROM inventory ORDER BY id DESC").fetchall()
+            rows = conn.execute(
+                f"SELECT * FROM inventory WHERE device_id = {_PH} ORDER BY id DESC",
+                (device_id,),
+            ).fetchall()
 
     return [dict(row) for row in rows]
 
 
-def remove_items(ids):
-    """Deletes rows by id. Returns the number of rows removed."""
+def remove_items(ids, device_id):
+    """Deletes one device's rows by id. Returns the number of rows removed."""
 
     ids = [int(i) for i in ids if str(i).isdigit()]
 
@@ -129,17 +148,20 @@ def remove_items(ids):
 
     with _connect() as conn:
         cursor = conn.execute(
-            f"DELETE FROM inventory WHERE id IN ({placeholders})",
-            ids,
+            f"DELETE FROM inventory WHERE device_id = {_PH} AND id IN ({placeholders})",
+            [device_id, *ids],
         )
         return cursor.rowcount
 
 
-def remove_all_items(source):
-    """Deletes every row for the given source. Returns the number of rows removed."""
+def remove_all_items(source, device_id):
+    """Deletes every row for the given source on one device. Returns the number of rows removed."""
 
     with _connect() as conn:
-        cursor = conn.execute(f"DELETE FROM inventory WHERE source = {_PH}", (source,))
+        cursor = conn.execute(
+            f"DELETE FROM inventory WHERE device_id = {_PH} AND source = {_PH}",
+            (device_id, source),
+        )
         return cursor.rowcount
 
 
