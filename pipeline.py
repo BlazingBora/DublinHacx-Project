@@ -19,13 +19,16 @@ API_KEY = os.getenv("AZURE_API_KEY")
 ENDPOINT = os.getenv("AZURE_ENDPOINT")
 
 if not API_KEY or not ENDPOINT:
-    raise ValueError(
-        "AZURE_API_KEY / AZURE_ENDPOINT is missing from your .env file."
+    # Don't crash at import - that turns every page (even the home page)
+    # into a 500 on Vercel. AI calls will fail and show an error instead.
+    print(
+        "WARNING: AZURE_API_KEY / AZURE_ENDPOINT is not set. Add them to "
+        ".env locally, or to the project's Environment Variables on Vercel."
     )
 
 client = OpenAI(
-    api_key=API_KEY,
-    base_url=ENDPOINT,
+    api_key=API_KEY or "missing-azure-api-key",
+    base_url=ENDPOINT or "https://missing-azure-endpoint.invalid",
     # Default is a 10 minute timeout with retries - far longer than
     # gunicorn's 120s worker timeout, so a stalled call would hang the page.
     timeout=45,

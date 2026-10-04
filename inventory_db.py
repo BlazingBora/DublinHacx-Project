@@ -20,7 +20,10 @@ else:
     import sqlite3
 
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    SQLITE_PATH = os.getenv("INVENTORY_DB_PATH", os.path.join(BASE_DIR, "inventory.db"))
+    # On Vercel the project dir is read-only, so without DATABASE_URL fall
+    # back to /tmp - the site stays up, but the inventory won't persist.
+    _default_dir = "/tmp" if os.getenv("VERCEL") else BASE_DIR
+    SQLITE_PATH = os.getenv("INVENTORY_DB_PATH", os.path.join(_default_dir, "inventory.db"))
 
     os.makedirs(os.path.dirname(SQLITE_PATH) or ".", exist_ok=True)
 
