@@ -1,12 +1,12 @@
 import os
 import uuid
 
-from flask import Flask, redirect, render_template, request, session, url_for
+from flask import Flask, redirect, render_template, request, url_for
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
 from api import api as api_blueprint
-from inventory_db import add_items, list_items, remove_items
+from inventory_db import add_items, list_items, remove_all_items, remove_items
 from pipeline import (
     check_interactions,
     enrich_items,
@@ -79,20 +79,7 @@ def scan():
 
     add_items(inventory, source="grocery", purchase_date=receipt_date)
 
-    grocery_names = [item.get("name") for item in inventory if item.get("name")]
-    session["groceries"] = grocery_names
-
-    interactions = check_interactions(session.get("medications", []), grocery_names)
-    recalls = check_food_recalls(grocery_names)
-
-    return render_template(
-        "results.html",
-        items=enrich_items(inventory),
-        mode="grocery",
-        interactions=interactions,
-        recalls=recalls,
-        receipt_date=receipt_date
-    )
+    return redirect(url_for("inventory", added=len(inventory)))
 
 
 @app.route("/add-statement", methods=["POST"])
@@ -106,21 +93,7 @@ def add_statement():
 
     add_items(inventory, source="grocery", purchase_date=purchase_date)
 
-    grocery_names = [item.get("name") for item in inventory if item.get("name")]
-    session["groceries"] = grocery_names
-
-    interactions = check_interactions(session.get("medications", []), grocery_names)
-    recalls = check_food_recalls(grocery_names)
-
-    return render_template(
-        "results.html",
-        items=enrich_items(inventory),
-        mode="grocery",
-        source="statement",
-        interactions=interactions,
-        recalls=recalls,
-        receipt_date=purchase_date
-    )
+    return redirect(url_for("inventory", added=len(inventory)))
 
 
 @app.route("/scan-medication", methods=["POST"])
@@ -155,17 +128,7 @@ def scan_medication():
 
     add_items(medications, source="medication")
 
-    medication_names = [med.get("name") for med in medications if med.get("name")]
-    session["medications"] = medication_names
-
-    interactions = check_interactions(medication_names, session.get("groceries", []))
-
-    return render_template(
-        "results.html",
-        items=enrich_items(medications),
-        mode="medication",
-        interactions=interactions
-    )
+    return redirect(url_for("inventory", added=len(medications)))
 
 
 @app.route("/recipe", methods=["POST"])
@@ -200,15 +163,14 @@ def inventory():
         [m.get("name") for m in medications if m.get("name")],
         grocery_names
     )
-    recalls = check_food_recalls(grocery_names)
 
     return render_template(
         "inventory.html",
         groceries=groceries,
         medications=medications,
         interactions=interactions,
-        recalls=recalls,
-        removed=request.args.get("removed", type=int)
+        removed=request.args.get("removed", type=int),
+        added=request.args.get("added", type=int)
     )
 
 
@@ -218,6 +180,25 @@ def inventory_remove():
     removed = remove_items(ids)
 
     return redirect(url_for("inventory", removed=removed))
+
+
+@app.route("/inventory/remove-all/<source>", methods=["POST"])
+def inventory_remove_all(source):
+    if source not in ("grocery", "medication"):
+        return redirect(url_for("inventory"))
+
+    removed = remove_all_items(source)
+
+    return redirect(url_for("inventory", removed=removed))
+
+
+@app.route("/recalls", methods=["GET"])
+def recalls_page():
+    grocery_names = [
+        item.get("name") for item in list_items(source="grocery") if item.get("name")
+    ]
+
+    return render_template("recalls.html", recalls=check_food_recalls(grocery_names))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <a href="{{ url_for('index') }}" class="back-link">&larr; Scan something else</a>
+    <a href="{{ url_for('inventory') }}" class="back-link inventory-link">📋 View full inventory</a>
+
+    <div class="interactions">
+        <h2>🚨 Possible food recalls</h2>
+        <p class="muted">
+            Best-effort keyword match against the FDA's public recall
+            database, checked against everything currently in your grocery
+            inventory. Not a guaranteed or complete check - verify anything
+            that matters against the actual recall notice.
+        </p>
+
+        {% if recalls %}
+            {% for r in recalls %}
+                <div class="interaction-card severity-{{ r.severity }}">
+                    <strong>{{ r.item }}</strong>: {{ r.classification or "Recall" }} ({{ r.date or "date unknown" }})
+                    <p>{{ r.reason or "No reason given." }}</p>
+                    <p class="muted">{{ r.firm }}: {{ r.product_description }}</p>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="success">✅ Nothing in your tracked groceries matches a current FDA recall.</p>
+        {% endif %}
+    </div>
+{% endblock %}

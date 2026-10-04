@@ -24,7 +24,11 @@ if not API_KEY or not ENDPOINT:
 
 client = OpenAI(
     api_key=API_KEY,
-    base_url=ENDPOINT
+    base_url=ENDPOINT,
+    # Default is a 10 minute timeout with retries - far longer than
+    # gunicorn's 120s worker timeout, so a stalled call would hang the page.
+    timeout=45,
+    max_retries=1
 )
 
 MODEL = "DeepSeek-V4.1-Flash"
@@ -255,19 +259,19 @@ OCR TEXT:
 
         if not response.choices:
             print("ERROR: No response choices.")
-            return []
+            return [], None
 
         message = response.choices[0].message
 
         if message is None:
             print("ERROR: No message returned.")
-            return []
+            return [], None
 
         result = message.content
 
         if result is None:
             print("\nERROR: Model returned no text.")
-            return []
+            return [], None
 
         # Remove markdown code fences
         result = result.replace("```json", "")

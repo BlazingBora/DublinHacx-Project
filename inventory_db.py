@@ -117,4 +117,12 @@ def remove_items(ids):
         return cursor.rowcount
 
 
+def remove_all_items(source):
+    """Deletes every row for the given source. Returns the number of rows removed."""
+
+    with _connect() as conn:
+        cursor = conn.execute("DELETE FROM inventory WHERE source = ?", (source,))
+        return cursor.rowcount
+
+
 init_db()

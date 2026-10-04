@@ -113,11 +113,32 @@ body {
     animation: fadeInUp 0.5s ease both;
 }
 
-.top-row {
+.site-header {
+    text-align: center;
+    padding-bottom: 28px;
+    margin-bottom: 36px;
+    border-bottom: 1px solid var(--border-glass);
+}
+
+h1 {
+    margin: 0 0 10px;
+    font-size: 52px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+}
+
+.subtitle {
+    color: var(--muted);
+    margin: 0 auto 22px;
+    max-width: 460px;
+    font-size: 15px;
+    line-height: 1.55;
+}
+
+.header-nav {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
+    justify-content: center;
+    gap: 10px;
     flex-wrap: wrap;
 }
 
@@ -129,25 +150,16 @@ body {
     color: var(--text);
     text-decoration: none;
     font-size: 13px;
-    padding: 8px 14px;
+    font-weight: 600;
+    padding: 9px 16px;
     border-radius: 999px;
-    transition: border-color 0.15s ease, transform 0.15s ease;
+    transition: border-color 0.15s ease, transform 0.15s ease, background 0.15s ease;
 }
 
 .nav-link:hover {
     border-color: var(--accent);
+    background: rgba(255, 255, 255, 0.06);
     transform: translateY(-1px);
-}
-
-h1 {
-    margin-bottom: 4px;
-    font-size: 28px;
-}
-
-.subtitle {
-    color: var(--muted);
-    margin-top: 0;
-    margin-bottom: 32px;
 }
 
 .upload-form {
@@ -389,6 +401,7 @@ button:disabled {
     border: 1px solid var(--border-glass);
     border-radius: 12px;
     padding: 16px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
     animation: fadeInUp 0.4s ease both;
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
@@ -545,7 +558,9 @@ button:disabled {
     display: flex;
     flex-wrap: wrap;
     gap: 8px 18px;
-    margin-bottom: 8px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-glass);
 }
 
 .select-row .card-select {
@@ -553,10 +568,23 @@ button:disabled {
 }
 
 .recipe-button,
-.remove-button {
+.remove-button,
+.remove-all-button {
     width: 100%;
     min-height: 50px;
     font-size: 16px;
+}
+
+.remove-all-button {
+    margin-top: 10px;
+    background: rgba(239, 68, 68, 0.12);
+    color: #ff9c9c;
+    border: 1px solid #5c2a2a;
+}
+
+.remove-all-button:not(:disabled):hover {
+    background: rgba(239, 68, 68, 0.2);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
 }
 
 .recipe-button {
@@ -652,4 +680,10 @@ button:disabled {
 .freeze-tip {
     color: #60a5fa !important;
     font-weight: 600;
+}
+
+@media (max-width: 480px) {
+    h1 {
+        font-size: 38px;
+    }
 }

@@ -26,6 +26,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
+            if (button.dataset.confirm && !window.confirm(button.dataset.confirm)) {
+                event.preventDefault();
+                return;
+            }
+
             if (form.dataset.submitting === "true") {
                 event.preventDefault();
                 return;

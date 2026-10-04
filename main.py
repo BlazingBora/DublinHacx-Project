@@ -47,7 +47,7 @@ def display_inventory(items):
 def main():
 
     print("=" * 65)
-    print("                 SMART GROCERY TRACKER")
+    print("                 XPIRE SCAN")
     print("=" * 65)
 
     image_path = input(
@@ -58,7 +58,7 @@ def main():
         print("\nERROR: File does not exist.")
         return
 
-    inventory, error = process_receipt(image_path)
+    inventory, receipt_date, error = process_receipt(image_path)
 
     if error:
         print(f"\nERROR: {error}")

@@ -35,24 +35,6 @@
         </div>
     {% endif %}
 
-    {% if recalls %}
-        <div class="interactions">
-            <h2>🚨 Possible food recalls</h2>
-            <p class="muted">
-                Best-effort keyword match against the FDA's public recall
-                database, not a guaranteed or complete check. Verify
-                anything that matters against the actual recall notice.
-            </p>
-            {% for r in recalls %}
-                <div class="interaction-card severity-{{ r.severity }}">
-                    <strong>{{ r.item }}</strong>: {{ r.classification or "Recall" }} ({{ r.date or "date unknown" }})
-                    <p>{{ r.reason or "No reason given." }}</p>
-                    <p class="muted">{{ r.firm }}: {{ r.product_description }}</p>
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-
     {% if items %}
         <form action="{{ url_for('recipe') }}" method="post" data-animated="true">
             <div class="inventory">

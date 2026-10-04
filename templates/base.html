@@ -14,13 +14,16 @@
         <span class="bg-grid"></span>
     </div>
     <main class="page">
-        <div class="top-row">
-            <div>
-                <h1>⏳ XpireScan</h1>
-                <p class="subtitle">Scan a receipt, snap a medication label, or just type what you bought, then track expiration dates and turn soon-to-expire groceries into a recipe.</p>
-            </div>
-            <a href="{{ url_for('inventory') }}" class="nav-link">📋 My Inventory</a>
-        </div>
+        <header class="site-header">
+            <h1>⏳ XpireScan</h1>
+            <p class="subtitle">Scan a receipt, snap a medication label, or just type what you bought, then track expiration dates and turn soon-to-expire groceries into a recipe.</p>
+            <nav class="header-nav">
+                <a href="{{ url_for('inventory') }}" class="nav-link">📋 My Inventory</a>
+                {% if request.endpoint == 'index' %}
+                    <a href="{{ url_for('recalls_page') }}" class="nav-link">🚨 Possible Food Recalls</a>
+                {% endif %}
+            </nav>
+        </header>
         {% block content %}{% endblock %}
     </main>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
